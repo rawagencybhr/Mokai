@@ -1,6 +1,6 @@
 
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../services/firebaseConfig';
+import { db } from '../../../services/firebaseConfig.js';
 
 // Standard Node.js environment for API routes (Serverless)
 export default async function handler(request: Request) {

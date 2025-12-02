@@ -4,7 +4,7 @@ import { Message, Sender } from "../types";
 
 // دالة لتهيئة الجلسة مع التاريخ السابق
 export const createChatSession = (systemInstruction: string, history: Content[] = []): Chat => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY as string });
   return ai.chats.create({
     model: MODEL_NAME,
     config: {
@@ -96,7 +96,7 @@ export const learnFromInteraction = async (
     ownerReply: string
 ): Promise<string | null> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY as string });
         
         const prompt = `
         You are an AI Apprentice learning from a Master Salesman (The Owner).

@@ -1,8 +1,9 @@
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../services/firebaseConfig.js';
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../../services/firebaseConfig.js";
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   try {
+    // Build full callback URL
     const fullUrl = `${req.headers["x-forwarded-proto"]}://${req.headers.host}${req.url}`;
     const url = new URL(fullUrl);
 
@@ -17,21 +18,22 @@ export default async function handler(req: any, res: any) {
     const appSecret = process.env.FACEBOOK_APP_SECRET;
     const redirectUri = `${url.origin}/api/instagram/oauth/callback`;
 
-    // 1) Exchange code for access token
-    const tokenUrl =
-      `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&redirect_uri=${redirectUri}&client_secret=${appSecret}&code=${code}`;
+    // 1. Exchange code for user access token
+    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${appId}&redirect_uri=${redirectUri}&client_secret=${appSecret}&code=${code}`;
 
     const tokenRes = await fetch(tokenUrl);
     const tokenData = await tokenRes.json();
 
     if (tokenData.error) {
-      return res.status(500).send(`Error exchanging token: ${tokenData.error.message}`);
+      return res
+        .status(500)
+        .send(`Token exchange error: ${tokenData.error.message}`);
     }
 
-    const shortLivedToken = tokenData.access_token;
+    const userAccessToken = tokenData.access_token;
 
-    // 2) Get user pages
-    const pagesUrl = `https://graph.facebook.com/v21.0/me/accounts?access_token=${shortLivedToken}&fields=id,name,access_token,instagram_business_account`;
+    // 2. Get the pages the user selected
+    const pagesUrl = `https://graph.facebook.com/v21.0/me/accounts?access_token=${userAccessToken}&fields=id,name,access_token,instagram_business_account`;
     const pagesRes = await fetch(pagesUrl);
     const pagesData = await pagesRes.json();
 
@@ -39,36 +41,47 @@ export default async function handler(req: any, res: any) {
       return res.status(404).send("No pages found");
     }
 
-    const connectedPage = pagesData.data.find((p: any) => p.instagram_business_account);
+    // Try to find a page with IG connected
+    let connectedPage = pagesData.data.find(
+      (p) => p.instagram_business_account
+    );
+
     if (!connectedPage) {
-      return res.status(404).send("No Instagram Business Account linked");
+      return res
+        .status(404)
+        .send("No Instagram Business Account linked to any Page");
     }
 
     const pageId = connectedPage.id;
     const pageAccessToken = connectedPage.access_token;
     const igBusinessId = connectedPage.instagram_business_account.id;
 
-    // 3) Get IG username
-    const igDetailsRes = await fetch(
+    // 3. Fetch Instagram username
+    const igRes = await fetch(
       `https://graph.facebook.com/v21.0/${igBusinessId}?fields=username&access_token=${pageAccessToken}`
     );
-    const igDetails = await igDetailsRes.json();
+    const igData = await igRes.json();
 
-    // Save to Firestore
+    if (igData.error) {
+      return res
+        .status(500)
+        .send(`Failed to fetch IG username: ${igData.error.message}`);
+    }
+
+    // 4. Save to Firestore
     const botRef = doc(db, "bots", botId);
     await updateDoc(botRef, {
       instagramConnected: true,
       instagramAccessToken: pageAccessToken,
       instagramBusinessId: igBusinessId,
       instagramPageId: pageId,
-      instagramUsername: igDetails.username,
+      instagramUsername: igData.username,
       connectedAt: new Date().toISOString(),
     });
 
-    return res.redirect(`${url.origin}?success=true`);
-
-  } catch (e: any) {
-    console.error("OAuth Callback Error:", e);
-    return res.status(500).send(e.toString());
+    return res.redirect(`${url.origin}/?success=true`);
+  } catch (err) {
+    console.error("OAuth Callback Error:", err);
+    return res.status(500).send(err.toString());
   }
 }

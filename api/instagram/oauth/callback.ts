@@ -56,7 +56,14 @@ export default async function handler(request: Request) {
 
     const finalToken = longLivedData.access_token || pageAccessToken;
 
-    // 5) Save to Firestore
+    // 5) Subscribe App to Instagram Messaging Webhooks
+    try {
+      await fetch(`https://graph.facebook.com/v21.0/${instagramBusinessId}/subscribed_apps?access_token=${finalToken}`, { method: 'POST' });
+    } catch (e) {
+      console.warn('Failed subscribing app to IG messaging:', e);
+    }
+
+    // 6) Save to Firestore
     const botRef = doc(db, 'bots', botId);
 
     await updateDoc(botRef, {
@@ -69,7 +76,7 @@ export default async function handler(request: Request) {
       connectedAt: new Date().toISOString(),
     } as any);
 
-    // 6) Redirect to dashboard
+    // 7) Redirect to dashboard
     return Response.redirect(`${url.origin}?success=true`);
 
   } catch (error: any) {

@@ -1,6 +1,6 @@
 
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../services/firebaseConfig';
+import { db } from '../../../services/firebaseConfig.js';
 import { GoogleGenAI } from "@google/genai";
 import { GENERATE_SYSTEM_INSTRUCTION } from '../../../constants';
 
@@ -26,10 +26,16 @@ export default async function handler(request: Request) {
 
       if (body.object === 'instagram') {
         for (const entry of body.entry) {
-          // Iterate over messaging events
           if (entry.messaging) {
             for (const event of entry.messaging) {
                await processInstagramEvent(event);
+            }
+          }
+          if (entry.changes) {
+            for (const change of entry.changes) {
+              if (change.field === 'messages') {
+                await processInstagramChange(change.value);
+              }
             }
           }
         }
@@ -75,7 +81,7 @@ async function processInstagramEvent(event: any) {
   // Note: For simplicity in webhook, we are not fetching full conversation history from Firestore/Instagram yet.
   // We treat it as a single turn or stateless for now, or rely on Gemini's stateless call with context.
   
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY });
   
   // Construct system instruction
   // We mock a user profile or leave it generic
@@ -98,6 +104,36 @@ async function processInstagramEvent(event: any) {
 
   } catch (error) {
     console.error("Gemini/Graph API Error:", error);
+  }
+}
+
+async function processInstagramChange(value: any) {
+  const senderId = value?.from?.id || value?.sender?.id || value?.sender_id;
+  const recipientId = value?.to?.id || value?.recipient?.id || value?.recipient_id || value?.instagram_business_account || value?.id;
+  const messageText = value?.message?.text || value?.messages?.[0]?.text || value?.messages?.[0]?.text?.body || value?.text;
+
+  if (!senderId || !recipientId || !messageText) return;
+
+  const botsRef = collection(db, 'bots');
+  const q = query(botsRef, where('instagramBusinessId', '==', recipientId));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) return;
+  const bot = querySnapshot.docs[0].data() as any;
+  if (!bot.isActive) return;
+
+  const ai = new GoogleGenAI({ apiKey: process.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || process.env.API_KEY });
+  const systemInstruction = GENERATE_SYSTEM_INSTRUCTION(bot, '', undefined, -1);
+  try {
+    const result = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: messageText,
+      config: { systemInstruction }
+    });
+    const responseText = result.text;
+    if (!responseText) return;
+    await sendInstagramMessage(recipientId, senderId, responseText, bot.instagramAccessToken);
+  } catch (e) {
+    console.error('IG Change Processing Error:', e);
   }
 }
 

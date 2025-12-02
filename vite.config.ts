@@ -7,8 +7,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // Polyfill process.env.API_KEY for client-side usage
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.API_KEY),
+      'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(
+        env.VITE_GEMINI_API_KEY || env.GEMINI_API_KEY || env.API_KEY
+      ),
     },
     build: {
       outDir: 'dist',

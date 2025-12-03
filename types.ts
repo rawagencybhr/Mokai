@@ -1,5 +1,3 @@
-
-
 export interface Message {
   id: string;
   text: string;
@@ -92,14 +90,4 @@ export interface BotConfig {
 
   // New: Sync Field for Alerts
   pendingAction?: PendingAction | null; 
-
-  // Instagram Integration
-  instagramConnected?: boolean;
-  instagramAccessToken?: string;
-  instagramBusinessId?: string;
-  instagramUserId?: string;
-  instagramPageId?: string;
-  instagramUsername?: string;
-  longLivedToken?: string;
-  connectedAt?: string;
 }

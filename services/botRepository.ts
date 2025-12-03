@@ -1,17 +1,14 @@
+import { BotConfig, PendingAction } from "../types";
+import { db } from "./firebaseConfig";
+import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, getDoc, arrayUnion, onSnapshot } from "firebase/firestore";
+import { INITIAL_BOTS } from "./mockData";
 
-
-
-import { BotConfig, PendingAction } from '../types';
-import { db } from './firebaseConfig';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc, getDoc, arrayUnion, onSnapshot } from 'firebase/firestore';
-import { INITIAL_BOTS } from './mockData';
-
-const COLLECTION_NAME = 'bots';
+const COLLECTION_NAME = "bots";
 
 // Helper to generate RWB-XXXX-XXXX format
 const generateLicenseKey = (): string => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 to avoid confusion
-  const segment = () => Array(4).fill(0).map(() => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion
+  const segment = () => Array(4).fill(0).map(() => chars.charAt(Math.floor(Math.random() * chars.length))).join("");
   return `RWB-${segment()}-${segment()}`;
 };
 
@@ -50,16 +47,16 @@ export const botRepository = {
         totalConversations: 0,
         activeConversations: 0,
         newClients: 0,
-        avgResponseTime: '0 ثانية',
-        avgConversationDuration: '0 دقيقة',
+        avgResponseTime: "0 ثانية",
+        avgConversationDuration: "0 دقيقة",
         topProducts: [],
-        peakHours: '--',
+        peakHours: "--",
         botResolutionRate: 100,
         interventionRate: 0,
         customerSatisfaction: 5.0,
         healthScore: 100,
-        spamRate: '0%',
-        riskLevel: 'Low' as const
+        spamRate: "0%",
+        riskLevel: "Low" as const
     };
 
     bot.stats = { ...defaultStats, ...bot.stats };
@@ -68,9 +65,9 @@ export const botRepository = {
     bot.isActive = true;
     bot.isListening = false;
     bot.learnedObservations = [];
-    bot.tone = bot.tone || 'friendly';
-    bot.plan = bot.plan || 'starter';
-    bot.language = bot.language || 'العربية';
+    bot.tone = bot.tone || "friendly";
+    bot.plan = bot.plan || "starter";
+    bot.language = bot.language || "العربية";
     
     // License & Subscription Defaults
     bot.licenseKey = generateLicenseKey();
@@ -82,9 +79,6 @@ export const botRepository = {
     nextYear.setFullYear(nextYear.getFullYear() + 1);
     bot.subscriptionEndDate = nextYear.toISOString();
 
-    // Instagram Defaults
-    bot.instagramConnected = false;
-
     await setDoc(doc(db, COLLECTION_NAME, bot.id.toString()), bot);
     return bot;
   },
@@ -95,21 +89,6 @@ export const botRepository = {
     // @ts-ignore
     await updateDoc(botRef, { ...updatedBot });
     return updatedBot;
-  },
-
-  // DISCONNECT INSTAGRAM
-  disconnectInstagram: async (id: number): Promise<void> => {
-    const botRef = doc(db, COLLECTION_NAME, id.toString());
-    await updateDoc(botRef, { 
-      instagramConnected: false,
-      instagramAccessToken: null,
-      instagramBusinessId: null,
-      instagramUserId: null,
-      instagramPageId: null,
-      instagramUsername: null,
-      longLivedToken: null,
-      connectedAt: null
-    } as any);
   },
 
   // UPDATE PENDING ACTION (Trigger Alert)

@@ -1,11 +1,16 @@
-
-
-import React, { useState } from 'react';
-import { Plus, MessageCircle, Instagram, MessageSquare, Bot, ArrowRight, ArrowLeft, Check, Store, Clock, Languages, Package, PlayCircle, MapPin, Trash2, Edit, PauseCircle, Play, FileText, Upload, X, BarChart3, Users, Zap, TrendingUp, Calendar, ShoppingBag, BrainCircuit, Activity, Timer, ShieldCheck, AlertTriangle, Ear, Smartphone, Copy, CheckCheck, Share2, ExternalLink, Link2, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from "react-router-dom";
+import { Plus, MessageCircle, MessageSquare, Bot, ArrowRight, ArrowLeft, Check, Store, Clock, Languages, Package, PlayCircle, MapPin, Trash2, Edit, PauseCircle, Play, FileText, Upload, X, BarChart3, Users, Zap, TrendingUp, Calendar, ShoppingBag, BrainCircuit, Activity, Timer, ShieldCheck, AlertTriangle, Ear, Smartphone, Copy, CheckCheck, Share2, ExternalLink, Link2, LogOut } from 'lucide-react';
 import { BotConfig } from '../types';
 import { processFile, FileProcessingResult } from '../services/fileService';
 import { RawbotLogo } from './RawbotLogo';
 import { botRepository } from '../services/botRepository';
+
+// New Instagram connect function
+function connectInstagram(botId: number) {
+  window.location.href =
+    `https://mokai-api.vercel.app/api/instagram/oauth/start?botId=${botId}`;
+}
 
 interface BotDashboardProps {
   bots: BotConfig[];
@@ -19,8 +24,8 @@ interface BotDashboardProps {
   onLaunchClientApp: (bot: BotConfig) => void;
 }
 
-export const BotDashboard: React.FC<BotDashboardProps> = ({ 
-  bots, 
+export const BotDashboard: React.FC<BotDashboardProps> = ({
+  bots,
   onSelectBot,
   onAddBot,
   onUpdateBot,
@@ -45,22 +50,32 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   const [copiedKeyId, setCopiedKeyId] = useState<number | null>(null);
   const [sharedLinkBotId, setSharedLinkBotId] = useState<number | null>(null);
 
+  // New Instagram connection handling
+  const [search] = useSearchParams();
+  const connected = search.get("connected");
+
+  useEffect(() => {
+    if (connected === "1") {
+      alert("تم ربط إنستغرام بنجاح 🎉");
+    }
+  }, [connected]);
+
   const initialFormData = {
-    botName: '',
-    storeName: '',
-    location: '',
-    businessType: '',
-    workHours: '',
-    language: 'العربية فقط 🇸🇦',
-    tone: 'friendly', // Default
-    plan: 'starter', // Default
-    products: '',
-    additionalInfo: '',
+    botName: "",
+    storeName: "",
+    location: "",
+    businessType: "",
+    workHours: "",
+    language: "العربية فقط 🇸🇦",
+    tone: "friendly", // Default
+    plan: "starter", // Default
+    products: "",
+    additionalInfo: "",
     platforms: [] as string[]
   };
 
   const [formData, setFormData] = useState(initialFormData);
-  const [botResponse, setBotResponse] = useState('');
+  const [botResponse, setBotResponse] = useState("");
 
   const copyToClipboard = async (text: string, onSuccess: () => void) => {
     // 1. Try Modern Clipboard API
@@ -70,7 +85,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
             onSuccess();
             return;
         } catch (err) {
-            console.warn('Modern clipboard failed, trying fallback...', err);
+            console.warn("Modern clipboard failed, trying fallback...", err);
         }
     }
 
@@ -82,14 +97,14 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         textArea.style.left = "0";
         textArea.style.top = "0";
         textArea.style.opacity = "0";
-        textArea.setAttribute('readonly', '');
+        textArea.setAttribute("readonly", "");
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        const successful = document.execCommand('copy');
+        const successful = document.execCommand("copy");
         document.body.removeChild(textArea);
         if (successful) onSuccess();
-        else throw new Error('execCommand returned false');
+        else throw new Error("execCommand returned false");
     } catch (e) {
         prompt("عذراً، انسخ الرابط يدوياً:", text);
     }
@@ -118,33 +133,6 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
     });
   };
 
-  const handleConnectInstagram = (e: React.MouseEvent, botId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const width = 600;
-    const height = 700;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-    
-    // Open OAuth Popup
-    window.open(
-        `/api/instagram/oauth/start?botId=${botId}`,
-        'Instagram Connect',
-        `width=${width},height=${height},top=${top},left=${left}`
-    );
-  };
-
-  const handleDisconnectInstagram = async (e: React.MouseEvent, botId: number) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (window.confirm('هل أنت متأكد من إلغاء ربط حساب انستقرام؟ سيتوقف الرد الآلي.')) {
-        await botRepository.disconnectInstagram(botId);
-        // Refresh local state if possible, or assume parent updates
-        // For quick UI feedback we rely on realtime listener or parent refresh
-    }
-  };
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setIsProcessingFile(true);
@@ -155,11 +143,11 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         setBotResponse(`تم استيعاب ملف "${file.name}" بنجاح! 📂\nصار عندي خبرة أكثر بمنتجات العميل.`);
         
         setTimeout(() => {
-          setBotResponse('');
+          setBotResponse("");
         }, 3000);
 
       } catch (error) {
-        alert('حدث خطأ أثناء معالجة الملف. تأكد أنه ملف نصي أو إكسل صالح.');
+        alert("حدث خطأ أثناء معالجة الملف. تأكد أنه ملف نصي أو إكسل صالح.");
         console.error(error);
       } finally {
         setIsProcessingFile(false);
@@ -174,70 +162,70 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   // ... (Steps configuration omitted for brevity, logic remains same)
   const steps = [
     {
-      title: 'بيانات المساعد 🤖',
+      title: "بيانات المساعد 🤖",
       icon: Bot,
-      question: 'أهلاً بك في لوحة الإعداد.\n\nما هو الاسم الذي سيظهر للعملاء (اسم المساعد الذكي)؟',
+      question: "أهلاً بك في لوحة الإعداد.\n\nما هو الاسم الذي سيظهر للعملاء (اسم المساعد الذكي)؟",
       response: (value: string) => `ممتاز! تم اعتماد اسم "${value}" للمساعد.`,
       fields: [
-        { name: 'botName', placeholder: 'مثال: مساعد خدمة العملاء، سارة، متجر الأناقة...', type: 'text' }
+        { name: "botName", placeholder: "مثال: مساعد خدمة العملاء، سارة، متجر الأناقة...", type: "text" }
       ]
     },
     {
-      title: 'بيانات العميل (المتجر) 🏪',
+      title: "بيانات العميل (المتجر) 🏪",
       icon: Store,
       question: (botName: string) => `الآن، لنوثق بيانات العميل التجاري الذي سيعمل "${botName}" لصالحه.`,
       response: (value: string) => `تم تسجيل متجر "${value}".`,
       fields: [
-        { name: 'storeName', label: 'اسم المتجر / العميل', placeholder: 'اسم المتجر التجاري', type: 'text' },
-        { name: 'businessType', label: 'نوع النشاط', placeholder: 'أثاث، مطعم، عيادة، عقارات...', type: 'text' },
-        { name: 'plan', label: 'مستوى الخدمة (B2B Plan)', type: 'select', options: ['starter', 'professional', 'growth'] }
+        { name: "storeName", label: "اسم المتجر / العميل", placeholder: "اسم المتجر التجاري", type: "text" },
+        { name: "businessType", label: "نوع النشاط", placeholder: "أثاث، مطعم، عيادة، عقارات...", type: "text" },
+        { name: "plan", label: "مستوى الخدمة (B2B Plan)", type: "select", options: ["starter", "professional", "growth"] }
       ]
     },
     {
-      title: 'الموقع والنطاق 📍',
+      title: "الموقع والنطاق 📍",
       icon: MapPin,
       question: () => `أين يقع هذا النشاط التجاري؟\n(هذه المعلومة ستستخدم لتوجيه الزبائن للفرع)`,
       response: () => `تمام، تم حفظ الموقع.`,
       fields: [
-        { name: 'location', placeholder: 'مثلاً: الرياض، حي الملقا - رابط قوقل ماب', type: 'text' }
+        { name: "location", placeholder: "مثلاً: الرياض، حي الملقا - رابط قوقل ماب", type: "text" }
       ]
     },
     {
-      title: 'أوقات العمل واللغة ⏰',
+      title: "أوقات العمل واللغة ⏰",
       icon: Clock,
       question: () => `حدد أوقات العمل الرسمية للعميل ولغة الرد المفضلة.`,
       response: () => `إعدادات ممتازة.`,
       fields: [
-        { name: 'workHours', placeholder: 'مثلاً: السبت - الخميس من 9 ص لـ 11 م', type: 'text' },
-        { name: 'language', label: 'لغة المساعد', type: 'select', options: ['العربية فقط 🇸🇦', 'English Only 🌍', 'الاثنين معاً 🌐'] }
+        { name: "workHours", placeholder: "مثلاً: السبت - الخميس من 9 ص لـ 11 م", type: "text" },
+        { name: "language", label: "لغة المساعد", type: "select", options: ["العربية فقط 🇸🇦", "English Only 🌍", "الاثنين معاً 🌐"] }
       ]
     },
     {
-      title: 'قاعدة المعرفة (Files) 📂',
+      title: "قاعدة المعرفة (Files) 📂",
       icon: FileText,
       question: () => `هل توجد ملفات (منيو، كتالوج، سياسات) خاصة بهذا العميل؟\nارفعها هنا لتدريب المساعد عليها.`,
       response: () => `تمت معالجة الملفات بنجاح.`,
       fields: [
-        { name: 'files', type: 'fileUpload' }
+        { name: "files", type: "fileUpload" }
       ]
     },
     {
-      title: 'المنتجات والخدمات ✨',
+      title: "المنتجات والخدمات ✨",
       icon: Package,
       question: () => `اكتب ملخصاً سريعاً عن أهم المنتجات أو الخدمات.\n(سيستخدمها المساعد كمرجع سريع)`,
       response: () => `معلومات واضحة وغنية.`,
       fields: [
-        { name: 'products', label: 'أبرز المنتجات/الخدمات:', placeholder: 'مثال:\n- برجر لحم واغيو\n- فرايز بالجبن\n- مشروبات غازية', type: 'textarea' },
-        { name: 'additionalInfo', label: 'ملاحظات إضافية (سياسات، عروض):', placeholder: 'مثل: التوصيل عبر تطبيقات التوصيل فقط، لا يوجد حجز مسبق...', type: 'textarea' }
+        { name: "products", label: "أبرز المنتجات/الخدمات:", placeholder: "مثال:\n- برجر لحم واغيو\n- فرايز بالجبن\n- مشروبات غازية", type: "textarea" },
+        { name: "additionalInfo", label: "ملاحظات إضافية (سياسات، عروض):", placeholder: "مثل: التوصيل عبر تطبيقات التوصيل فقط، لا يوجد حجز مسبق...", type: "textarea" }
       ]
     },
     {
-      title: 'تفعيل القنوات 📱',
+      title: "تفعيل القنوات 📱",
       icon: MessageCircle,
       question: () => `ما هي المنصات التي سيتم تفعيل المساعد عليها لهذا العميل؟`,
       response: () => `تم إعداد العميل بنجاح! 🚀`,
       fields: [
-        { name: 'platforms', type: 'platforms' }
+        { name: "platforms", type: "platforms" }
       ]
     }
   ];
@@ -258,7 +246,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       const currentStepData = steps[currentStep];
-      let responseText = '';
+      let responseText = "";
       
       if (currentStep === 0) {
         // @ts-ignore
@@ -274,7 +262,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
       setBotResponse(responseText);
       
       setTimeout(() => {
-        setBotResponse('');
+        setBotResponse("");
         setCurrentStep(currentStep + 1);
       }, 1500);
     }
@@ -287,7 +275,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   };
 
   const handleSubmit = () => {
-    const combinedKnowledgeBase = uploadedFiles.map(f => `=== FILE: ${f.fileName} ===\n${f.content}`).join('\n\n');
+    const combinedKnowledgeBase = uploadedFiles.map(f => `=== FILE: ${f.fileName} ===\n${f.content}`).join("\n\n");
 
     if (editingBotId) {
       const existingBot = bots.find(b => b.id === editingBotId);
@@ -307,11 +295,10 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         isActive: true,
         isListening: false,
         createdAt: new Date().toISOString(),
-        licenseKey: 'PENDING',
+        licenseKey: "PENDING",
         isActivated: false,
         subscriptionEndDate: new Date().toISOString(),
         toneValue: 50,
-        instagramConnected: false
       };
       onAddBot(newBot);
     }
@@ -325,7 +312,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
     setCurrentStep(0);
     setFormData(initialFormData);
     setUploadedFiles([]);
-    setBotResponse('');
+    setBotResponse("");
   };
 
   const handleEditBot = (bot: BotConfig) => {
@@ -337,8 +324,8 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
       businessType: bot.businessType,
       workHours: bot.workHours,
       language: bot.language,
-      tone: bot.tone || 'friendly',
-      plan: bot.plan || 'starter',
+      tone: bot.tone || "friendly",
+      plan: bot.plan || "starter",
       products: bot.products,
       additionalInfo: bot.additionalInfo,
       platforms: bot.platforms
@@ -392,21 +379,21 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
   const isStepValid = () => {
     const currentFields = steps[currentStep].fields;
     return currentFields.every(field => {
-      if (field.type === 'platforms') {
+      if (field.type === "platforms") {
         // @ts-ignore
         return formData.platforms.length > 0;
       }
-      if (field.type === 'fileUpload') {
+      if (field.type === "fileUpload") {
         return true; 
       }
       // @ts-ignore
-      return formData[field.name]?.trim() !== '';
+      return formData[field.name]?.trim() !== "";
     });
   };
 
   const renderField = (field: any) => {
     // ... (rendering logic same as before)
-    if (field.type === 'fileUpload') {
+    if (field.type === "fileUpload") {
       return (
         <div className="space-y-4">
           <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-brand-50 hover:border-brand-400 transition-colors cursor-pointer relative">
@@ -433,49 +420,28 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         </div>
       )
     }
-    if (field.type === 'platforms') {
+    if (field.type === "platforms") {
         return (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => handlePlatformToggle('instagram')}
+              onClick={() => handlePlatformToggle("whatsapp")}
               // @ts-ignore
               className={`p-4 rounded-xl border-2 transition-all ${
                 // @ts-ignore
-                formData.platforms.includes('instagram')
-                  ? 'border-purple-500 bg-purple-50 shadow-lg'
-                  : 'border-slate-200 hover:border-purple-300'
-              }`}
-            >
-              <Instagram className={`w-8 h-8 mx-auto mb-2 ${
-                // @ts-ignore
-                formData.platforms.includes('instagram') ? 'text-purple-600' : 'text-slate-400'
-              }`} />
-              <div className="text-sm font-medium">Instagram</div>
-              {/* @ts-ignore */}
-              {formData.platforms.includes('instagram') && (
-                <div className="text-xs text-purple-600 mt-1">✓ مفعّل</div>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => handlePlatformToggle('whatsapp')}
-              // @ts-ignore
-              className={`p-4 rounded-xl border-2 transition-all ${
-                // @ts-ignore
-                formData.platforms.includes('whatsapp')
-                  ? 'border-emerald-500 bg-emerald-50 shadow-lg'
-                  : 'border-slate-200 hover:border-emerald-300'
+                formData.platforms.includes("whatsapp")
+                  ? "border-emerald-500 bg-emerald-50 shadow-lg"
+                  : "border-slate-200 hover:border-emerald-300"
               }`}
             >
               <MessageSquare className={`w-8 h-8 mx-auto mb-2 ${
                 // @ts-ignore
-                formData.platforms.includes('whatsapp') ? 'text-emerald-600' : 'text-slate-400'
+                formData.platforms.includes("whatsapp") ? "text-emerald-600" : "text-slate-400"
               }`} />
               <div className="text-sm font-medium">WhatsApp</div>
               {/* @ts-ignore */}
-              {formData.platforms.includes('whatsapp') && (
+              {formData.platforms.includes("whatsapp") && (
                 <div className="text-xs text-emerald-600 mt-1">✓ مفعّل</div>
               )}
             </button>
@@ -483,7 +449,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         </div>
       );
     }
-    if (field.type === 'select') {
+    if (field.type === "select") {
         return (
         <div key={field.name}>
           {field.label && <label className="block text-sm font-medium text-slate-700 mb-2">{field.label}</label>}
@@ -500,7 +466,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
         </div>
       );
     }
-    if (field.type === 'textarea') {
+    if (field.type === "textarea") {
          return (
         <div key={field.name}>
           {field.label && <label className="block text-sm font-medium text-slate-700 mb-2">{field.label}</label>}
@@ -580,7 +546,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {bots.map(bot => (
               // Enhanced contrast: Increased border color from slate-100 to slate-200/300, added bg-white
-              <div key={bot.id} className={`bg-white rounded-2xl shadow-sm p-6 hover:shadow-lg transition-all border border-slate-200 group relative ${!bot.isActive ? 'opacity-75' : ''}`}>
+              <div key={bot.id} className={`bg-white rounded-2xl shadow-sm p-6 hover:shadow-lg transition-all border border-slate-200 group relative ${!bot.isActive ? "opacity-75" : ""}`}>
                 
                 {/* Status Badge */}
                 <div className="absolute top-4 left-4 flex items-center gap-2">
@@ -601,8 +567,8 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
                 </div>
 
                 <div className="flex items-center gap-3 mb-4 mt-2">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 border border-slate-100 ${bot.isActive ? 'bg-brand-50' : 'bg-slate-100'}`}>
-                    <Bot className={`w-6 h-6 ${bot.isActive ? 'text-brand-600' : 'text-slate-400'}`} />
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 border border-slate-100 ${bot.isActive ? "bg-brand-50" : "bg-slate-100"}`}>
+                    <Bot className={`w-6 h-6 ${bot.isActive ? "text-brand-600" : "text-slate-400"}`} />
                   </div>
                   <div className="flex-1">
                     <h3 className="font-bold text-slate-900">{bot.storeName}</h3>
@@ -615,53 +581,16 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
                     <div className="flex flex-col">
                         <span className="text-[10px] text-slate-400 font-bold uppercase">كود التفعيل (License Key)</span>
                         <code className="text-xs font-mono font-bold text-slate-700 tracking-wider select-all cursor-text">
-                           {bot.licenseKey || 'PENDING'}
+                           {bot.licenseKey || "PENDING"}
                         </code>
                     </div>
                     <button 
-                       onClick={() => handleCopyLicense(bot.licenseKey || '', bot.id)}
+                       onClick={() => handleCopyLicense(bot.licenseKey || "", bot.id)}
                        className="p-1.5 hover:bg-white border border-transparent hover:border-slate-200 rounded text-slate-400 hover:text-brand-600 transition-all"
                        title="نسخ الكود"
                     >
                        {copiedKeyId === bot.id ? <CheckCheck className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                     </button>
-                </div>
-
-                {/* Instagram Integration Section (NEW) */}
-                <div className="mb-4 border-t border-b border-slate-100 py-3">
-                  <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                        <Instagram className="w-3 h-3 text-purple-600" />
-                        Instagram Integration
-                      </span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${bot.instagramConnected ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {bot.instagramConnected ? 'Connected ✔️' : 'Not Connected'}
-                      </span>
-                  </div>
-                  
-                  {bot.instagramConnected ? (
-                    <div className="flex items-center justify-between bg-purple-50 p-2 rounded-lg border border-purple-100">
-                      <div className="text-xs">
-                         <p className="font-bold text-purple-900">@{bot.instagramUsername || 'Unknown'}</p>
-                         <p className="text-[10px] text-purple-600">ID: {bot.instagramBusinessId}</p>
-                      </div>
-                      <button 
-                        onClick={(e) => handleDisconnectInstagram(e, bot.id)}
-                        className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
-                        title="Disconnect"
-                      >
-                         <LogOut className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                     <button
-                        onClick={(e) => handleConnectInstagram(e, bot.id)}
-                        className="w-full flex items-center justify-center gap-2 py-2 bg-slate-50 border border-slate-200 text-slate-600 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 rounded-lg text-xs font-bold transition-all"
-                     >
-                        <Link2 className="w-3 h-3" />
-                        Connect Instagram Account
-                     </button>
-                  )}
                 </div>
 
                 {/* Details - Enhanced divider visibility */}
@@ -690,11 +619,19 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
                             <Smartphone className="w-5 h-5 pointer-events-none" />
                         </button>
 
+                         {/* New Instagram Connect Button */}
+                        <button
+                          onClick={() => connectInstagram(bot.id)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded"
+                        >
+                          ربط إنستغرام
+                        </button>
+
                         <button 
                             type="button"
                             onClick={(e) => handleListeningToggleClick(e, bot.id)}
-                            className={`p-2 rounded-lg border transition-all ${bot.isListening ? 'text-brand-600 bg-brand-50 border-brand-200 ring-1 ring-brand-100' : 'text-slate-400 border-transparent hover:bg-slate-50 hover:border-slate-200'}`}
-                            title={bot.isListening ? 'تعطيل وضع الاستماع' : 'تفعيل وضع الاستماع'}
+                            className={`p-2 rounded-lg border transition-all ${bot.isListening ? "text-brand-600 bg-brand-50 border-brand-200 ring-1 ring-brand-100" : "text-slate-400 border-transparent hover:bg-slate-50 hover:border-slate-200"}`}
+                            title={bot.isListening ? "تعطيل وضع الاستماع" : "تفعيل وضع الاستماع"}
                         >
                             <Ear className="w-5 h-5 pointer-events-none" />
                         </button>
@@ -726,7 +663,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
                     <button 
                         onClick={() => bot.isActive && onSelectBot(bot)}
                         disabled={!bot.isActive}
-                        className={`flex items-center gap-1 text-sm font-bold transition-colors relative z-10 ${bot.isActive ? 'text-brand-600 hover:text-brand-800' : 'text-slate-400 cursor-not-allowed'}`}
+                        className={`flex items-center gap-1 text-sm font-bold transition-colors relative z-10 ${bot.isActive ? "text-brand-600 hover:text-brand-800" : "text-slate-400 cursor-not-allowed"}`}
                     >
                         <span>تجربة الشات</span>
                         <PlayCircle className="w-4 h-4 pointer-events-none" />
@@ -761,7 +698,7 @@ export const BotDashboard: React.FC<BotDashboardProps> = ({
                       )}
                       <div className="mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
                           <p className="text-base font-medium text-slate-900 whitespace-pre-line leading-relaxed">
-                            {typeof steps[currentStep].question === 'function' 
+                            {typeof steps[currentStep].question === "function" 
                                 // @ts-ignore
                                 ? steps[currentStep].question(formData.botName || formData.storeName)
                                 : steps[currentStep].question}

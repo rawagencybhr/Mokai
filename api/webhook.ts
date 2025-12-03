@@ -15,17 +15,6 @@ export default function handler(req: any, res: any) {
 
   if (req.method === "POST") { 
     console.log("Webhook Received:", JSON.stringify(req.body, null, 2)); 
-    try {
-      const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
-      const host = (req.headers['x-forwarded-host'] as string) || req.headers.host;
-      const origin = `${proto}://${host}`;
-      const forwardUrl = `${origin}/api/instagram/webhook`;
-      fetch(forwardUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(req.body)
-      }).catch(() => {});
-    } catch {}
     return res.status(200).send("EVENT_RECEIVED"); 
   } 
 
